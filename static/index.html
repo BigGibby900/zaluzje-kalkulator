@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator Żaluzji</title>
+    <script>
+        async function obliczCene() {
+            const wysokosc = document.getElementById("wysokosc").value;
+            const szerokosc = document.getElementById("szerokosc").value;
+
+            const response = await fetch(`/cena/?wysokosc=${wysokosc}&szerokosc=${szerokosc}`);
+            const data = await response.json();
+
+            if (data.error) {
+                document.getElementById("wynik").innerText = data.error;
+            } else {
+                document.getElementById("wynik").innerText = 
+                    `Cena: ${data.cena} zł (zaokrąglone do: ${data.zaokraglona_szerokosc}x${data.zaokraglona_wysokosc})`;
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Kalkulator cen żaluzji</h1>
+    <label for="wysokosc">Wysokość (cm):</label>
+    <input type="number" id="wysokosc" required>
+    <br>
+    <label for="szerokosc">Szerokość (cm):</label>
+    <input type="number" id="szerokosc" required>
+    <br>
+    <button onclick="obliczCene()">Sprawdź cenę</button>
+    <h2 id="wynik"></h2>
+</body>
+</html>

@@ -1,19 +1,29 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import pandas as pd
 import math
 import os
 
 app = FastAPI()
 
-# Pozwolenie na połączenia z frontendem (można zmienić allow_origins na konkretną domenę)
+# Konfiguracja CORS (dostęp z dowolnej domeny)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # W produkcji lepiej ustawić konkretną domenę np. ["https://moja-strona.pl"]
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Montowanie folderu ze statycznymi plikami (dla pliku index.html)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+def read_root():
+    """Serwuje stronę główną"""
+    return FileResponse("static/index.html")
 
 # Sprawdzenie, czy plik cennik.xlsx istnieje
 file_path = "cennik.xlsx"
@@ -23,18 +33,18 @@ if not os.path.exists(file_path):
 # Wczytujemy cennik z pliku Excel
 df = pd.read_excel(file_path, sheet_name="Cennik", index_col=0)
 
-# Usunięcie pustych wartości i konwersja indeksów na liczby
+# Czyszczenie i konwersja danych
 df = df.dropna(how="all")
-df.columns = pd.to_numeric(df.columns, errors="coerce")  # Zamiana szerokości na liczby
-df.index = pd.to_numeric(df.index, errors="coerce")  # Zamiana wysokości na liczby
-df = df.dropna().astype(float)  # Konwersja na float dla poprawnego indeksowania
+df.columns = pd.to_numeric(df.columns, errors="coerce")  
+df.index = pd.to_numeric(df.index, errors="coerce")  
+df = df.dropna().astype(float)  
 
 def round_up(value, step=10):
     """Zaokrągla wartość w górę do najbliższej wielokrotności `step`"""
     return math.ceil(value / step) * step
 
 def get_price(width, height):
-    """Pobiera cenę dla zaokrąglonych wartości w górę"""
+    """Pobiera cenę na podstawie wysokości i szerokości"""
     rounded_width = round_up(width, 10)
     rounded_height = round_up(height, 10)
     available_widths = sorted(df.columns)
@@ -70,7 +80,7 @@ def get_cena(wysokosc: int, szerokosc: int):
         "zaokraglona_wysokosc": nearest_height
     }
 
-# Uruchamianie serwera w Render
+# Uruchamianie serwera (Render)
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=10000)
