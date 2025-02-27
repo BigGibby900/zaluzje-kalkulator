@@ -8,21 +8,20 @@ import os
 
 app = FastAPI()
 
-# Konfiguracja CORS (dostęp z dowolnej domeny)
+# Pozwolenie na połączenia z frontendem
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Montowanie folderu ze statycznymi plikami (dla pliku index.html)
+# Dodanie obsługi plików statycznych (np. index.html)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 def read_root():
-    """Serwuje stronę główną"""
     return FileResponse("static/index.html")
 
 # Sprawdzenie, czy plik cennik.xlsx istnieje
@@ -32,19 +31,15 @@ if not os.path.exists(file_path):
 
 # Wczytujemy cennik z pliku Excel
 df = pd.read_excel(file_path, sheet_name="Cennik", index_col=0)
-
-# Czyszczenie i konwersja danych
 df = df.dropna(how="all")
-df.columns = pd.to_numeric(df.columns, errors="coerce")  
-df.index = pd.to_numeric(df.index, errors="coerce")  
-df = df.dropna().astype(float)  
+df.columns = pd.to_numeric(df.columns, errors="coerce")  # Zamiana szerokości na liczby
+df.index = pd.to_numeric(df.index, errors="coerce")  # Zamiana wysokości na liczby
+df = df.dropna().astype(float)
 
 def round_up(value, step=10):
-    """Zaokrągla wartość w górę do najbliższej wielokrotności `step`"""
     return math.ceil(value / step) * step
 
 def get_price(width, height):
-    """Pobiera cenę na podstawie wysokości i szerokości"""
     rounded_width = round_up(width, 10)
     rounded_height = round_up(height, 10)
     available_widths = sorted(df.columns)
@@ -68,7 +63,6 @@ def get_price(width, height):
 
 @app.get("/cena/")
 def get_cena(wysokosc: int, szerokosc: int):
-    """API do pobierania ceny na podstawie wysokości i szerokości"""
     price, nearest_width, nearest_height, error_message = get_price(szerokosc, wysokosc)
     if error_message:
         return {"error": error_message}
@@ -80,7 +74,7 @@ def get_cena(wysokosc: int, szerokosc: int):
         "zaokraglona_wysokosc": nearest_height
     }
 
-# Uruchamianie serwera (Render)
+# Uruchamianie serwera w Render
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=10000)
